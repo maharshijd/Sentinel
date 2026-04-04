@@ -37,7 +37,7 @@ public class AlertDAO {
                         rs.getInt("event_score"));
             }
 
-            if (!hasAlerts) {
+            if (hasAlerts == false) {
                 System.out.println("No alerts found in the system.");
             }
             System.out.println("=======================================================================\n");
@@ -48,35 +48,48 @@ public class AlertDAO {
         }
     }
 
-    // NEW METHOD: Resolves an alert and logs the action in the remediation table
+    public boolean createAlertFromEvent(int eventId, String alertType, String securityLevel) {
+        String query = "INSERT INTO alerts (event_id, alert_type, security_level, alert_status, created_time) "
+                + "VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP)";
+
+        try (Connection conn = DBconnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, eventId);
+            stmt.setString(2, alertType);
+            stmt.setString(3, securityLevel.toUpperCase());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error creating alert from rule.");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public boolean resolveAlert(int alertId, int currentUserId, String actionTaken) {
         String updateAlertQuery = "UPDATE alerts SET alert_status = 'resolved' WHERE alert_id = ?";
         String insertRemediationQuery = "INSERT INTO remediation (alert_id, admin_id, status, action_taken, resolved_time) "
-                +
-                "VALUES (?, (SELECT admin_id FROM admin WHERE user_id = ?), 'resolved', ?, CURRENT_TIMESTAMP)";
+                + "VALUES (?, (SELECT admin_id FROM admin WHERE user_id = ?), 'resolved', ?, CURRENT_TIMESTAMP)";
 
         try (Connection conn = DBconnection.getConnection()) {
-            conn.setAutoCommit(false); // Start transaction so both queries succeed or fail together
+            conn.setAutoCommit(false);
 
             try (PreparedStatement updateStmt = conn.prepareStatement(updateAlertQuery);
                     PreparedStatement insertStmt = conn.prepareStatement(insertRemediationQuery)) {
 
-                // 1. Update Alert Status
                 updateStmt.setInt(1, alertId);
                 int rowsUpdated = updateStmt.executeUpdate();
 
                 if (rowsUpdated > 0) {
-                    // 2. Log Remediation Action
                     insertStmt.setInt(1, alertId);
                     insertStmt.setInt(2, currentUserId);
                     insertStmt.setString(3, actionTaken);
                     insertStmt.executeUpdate();
 
-                    conn.commit(); // Commit the transaction
+                    conn.commit();
                     return true;
                 }
             } catch (SQLException ex) {
-                conn.rollback(); // Undo if something goes wrong
+                conn.rollback();
                 System.out.println("Error processing resolution. Transaction rolled back.");
                 ex.printStackTrace();
             }

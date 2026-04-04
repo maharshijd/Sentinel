@@ -1,16 +1,29 @@
 package main;
 
+import model.SecurityRule;
 import model.User;
 import service.AuthService;
 import dao.AlertDAO;
+import dao.DeviceDAO;
 import dao.EventDAO;
+import dao.SecurityRuleDAO;
+
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
     private static Scanner scanner = new Scanner(System.in);
     private static AuthService authService = new AuthService();
     private static AlertDAO alertDAO = new AlertDAO();
-    private static EventDAO eventDAO = new EventDAO(); // <-- New Event DAO added
+    private static EventDAO eventDAO = new EventDAO();
+    private static DeviceDAO deviceDAO = new DeviceDAO();
+    private static SecurityRuleDAO securityRuleDAO = new SecurityRuleDAO();
     private static User currentUser = null;
 
     public static void main(String[] args) {
@@ -46,10 +59,10 @@ public class Main {
 
                 currentUser = authService.login(email, pass);
 
-                if (currentUser != null) {
-                    System.out.println("\n[SUCCESS] Login successful! Welcome " + currentUser.getEmail());
-                } else {
+                if (currentUser == null) {
                     System.out.println("\n[ERROR] Invalid email or password.");
+                } else {
+                    System.out.println("\n[SUCCESS] Login successful. Welcome " + currentUser.getEmail());
                 }
                 break;
             case 2:
@@ -63,7 +76,7 @@ public class Main {
                 int dept = scanner.nextInt();
 
                 if (authService.register(newEmail, newPass, role, dept)) {
-                    System.out.println("[SUCCESS] Registration successful! You can now log in.");
+                    System.out.println("[SUCCESS] Registration successful. You can now log in.");
                 } else {
                     System.out.println("[ERROR] Registration failed.");
                 }
@@ -80,13 +93,15 @@ public class Main {
         System.out.println("\n--- " + currentUser.getRoleName() + " DASHBOARD ---");
         System.out.println("1. View Active Alerts");
         System.out.println("2. Resolve an Alert");
-        System.out.println("3. View Event Logs"); // <-- New Option
-        System.out.println("4. Simulate Security Event"); // <-- New Option
-        System.out.println("5. Logout");
+        System.out.println("3. View Event Logs");
+        System.out.println("4. Simulate Security Event");
+        System.out.println("5. Track Connected Devices");
+        System.out.println("6. Set Security Rules");
+        System.out.println("7. Logout");
         System.out.print("Enter choice: ");
 
         int choice = scanner.nextInt();
-        scanner.nextLine(); // consume newline
+        scanner.nextLine();
 
         switch (choice) {
             case 1:
@@ -112,36 +127,269 @@ public class Main {
                 }
                 break;
             case 3:
-                eventDAO.viewAllEvents(); // <-- Triggers Event Viewer
+                eventDAO.viewAllEvents();
                 break;
             case 4:
-                // Simulate an event being logged
-                System.out.print("Enter Session ID (try 1): ");
-                int sessionId = scanner.nextInt();
-                scanner.nextLine();
-
-                System.out.print("Enter Event Type (e.g., UNAUTHORIZED_ACCESS): ");
-                String eventType = scanner.nextLine();
-
-                System.out.print("Enter Threat Score (0-100): ");
-                int score = scanner.nextInt();
-                scanner.nextLine();
-
-                System.out.print("Enter Severity (LOW/MEDIUM/HIGH/CRITICAL): ");
-                String severity = scanner.nextLine();
-
-                if (eventDAO.logEvent(sessionId, eventType, score, severity.toUpperCase())) {
-                    System.out.println("\n[SUCCESS] Security event logged successfully.");
-                } else {
-                    System.out.println("\n[ERROR] Failed to log event.");
-                }
+                simulateSecurityEvent();
                 break;
             case 5:
+                showDeviceTrackingMenu();
+                break;
+            case 6:
+                if (currentUser.getRoleName().equalsIgnoreCase("ADMIN")) {
+                    showSecurityRulesMenu();
+                } else {
+                    System.out.println("\n[DENIED] Only admins can manage security rules.");
+                }
+                break;
+            case 7:
                 currentUser = null;
                 System.out.println("Logged out successfully.");
                 break;
             default:
                 System.out.println("Invalid choice.");
+        }
+    }
+
+    private static void simulateSecurityEvent() {
+        System.out.print("Enter Session ID (try 1): ");
+        int sessionId = scanner.nextInt();
+        scanner.nextLine();
+
+        System.out.print("Enter Event Type (e.g., UNAUTHORIZED_ACCESS): ");
+        String eventType = scanner.nextLine();
+
+        System.out.print("Enter Threat Score (0-100): ");
+        int score = scanner.nextInt();
+        scanner.nextLine();
+
+        System.out.print("Enter Severity (LOW/MEDIUM/HIGH/CRITICAL): ");
+        String severity = scanner.nextLine();
+
+        int eventId = eventDAO.logEventAndGetId(sessionId, eventType, score, severity.toUpperCase());
+        if (eventId > 0) {
+            System.out.println("\n[SUCCESS] Security event logged successfully.");
+            evaluateRulesForEvent(eventId, eventType, score);
+        } else {
+            System.out.println("\n[ERROR] Failed to log event.");
+        }
+    }
+
+    private static void evaluateRulesForEvent(int eventId, String eventType, int score) {
+        List<SecurityRule> rules = securityRuleDAO.getActiveRules();
+        int createdAlerts = 0;
+
+        for (SecurityRule rule : rules) {
+            if (ruleMatchesEvent(rule, eventType, score)) {
+                String alertType = "RULE_MATCH: " + rule.getRuleName();
+                if (alertDAO.createAlertFromEvent(eventId, alertType, rule.getSeverity())) {
+                    createdAlerts++;
+                }
+            }
+        }
+
+        if (createdAlerts > 0) {
+            System.out.println("[RULE ENGINE] " + createdAlerts + " alert(s) created from active security rules.");
+        }
+    }
+
+    private static boolean ruleMatchesEvent(SecurityRule rule, String eventType, int score) {
+        String metric = rule.getMetricType().toUpperCase();
+        String operator = rule.getOperatorType().toUpperCase();
+        String threshold = rule.getThresholdValue();
+
+        if (metric.equals("EVENT_SCORE")) {
+            int thresholdInt;
+            try {
+                thresholdInt = Integer.parseInt(threshold);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+
+            switch (operator) {
+                case "GT":
+                    return score > thresholdInt;
+                case "GTE":
+                    return score >= thresholdInt;
+                case "EQ":
+                    return score == thresholdInt;
+                case "LT":
+                    return score < thresholdInt;
+                case "LTE":
+                    return score <= thresholdInt;
+                default:
+                    return false;
+            }
+        }
+
+        if (metric.equals("EVENT_TYPE")) {
+            switch (operator) {
+                case "EQ":
+                    return eventType.equalsIgnoreCase(threshold);
+                case "CONTAINS":
+                    return eventType.toUpperCase().contains(threshold.toUpperCase());
+                default:
+                    return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static void showSecurityRulesMenu() {
+        while (true) {
+            System.out.println("\n--- SECURITY RULES ---");
+            System.out.println("1. Create Rule");
+            System.out.println("2. View Rules");
+            System.out.println("3. Enable/Disable Rule");
+            System.out.println("4. Back to Dashboard");
+            System.out.print("Enter choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Rule Name: ");
+                    String ruleName = scanner.nextLine();
+
+                    System.out.print("Metric Type (EVENT_SCORE / EVENT_TYPE): ");
+                    String metricType = scanner.nextLine().toUpperCase();
+
+                    System.out.print("Operator (GT/GTE/EQ/LT/LTE/CONTAINS): ");
+                    String operator = scanner.nextLine().toUpperCase();
+
+                    System.out.print("Threshold Value (e.g., 70 or UNAUTHORIZED_ACCESS): ");
+                    String threshold = scanner.nextLine();
+
+                    System.out.print("Severity (LOW/MEDIUM/HIGH/CRITICAL): ");
+                    String severity = scanner.nextLine().toUpperCase();
+
+                    if (securityRuleDAO.createRule(ruleName, metricType, operator, threshold, severity,
+                            currentUser.getUserId())) {
+                        System.out.println("[SUCCESS] Security rule created.");
+                    } else {
+                        System.out.println("[ERROR] Could not create rule.");
+                    }
+                    break;
+
+                case 2:
+                    securityRuleDAO.viewAllRules();
+                    break;
+
+                case 3:
+                    securityRuleDAO.viewAllRules();
+                    System.out.print("Enter Rule ID: ");
+                    int ruleId = scanner.nextInt();
+                    scanner.nextLine();
+
+                    System.out.print("Set status (1 = ACTIVE, 2 = INACTIVE): ");
+                    int statusChoice = scanner.nextInt();
+                    scanner.nextLine();
+
+                    boolean active = statusChoice == 1;
+                    if (securityRuleDAO.setRuleStatus(ruleId, active)) {
+                        System.out.println("[SUCCESS] Rule status updated.");
+                    } else {
+                        System.out.println("[ERROR] Could not update rule status.");
+                    }
+                    break;
+
+                case 4:
+                    return;
+
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    private static void showDeviceTrackingMenu() {
+        boolean isAdmin = currentUser.getRoleName().equalsIgnoreCase("ADMIN");
+
+        while (true) {
+            System.out.println("\n--- DEVICE TRACKING ---");
+            System.out.println("1. Register / Update Current Device");
+            System.out.println("2. View Connected Devices");
+            System.out.println("3. Disconnect a Device");
+            System.out.println("4. Back to Dashboard");
+            System.out.print("Enter choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Device Fingerprint (unique id): ");
+                    String fingerprint = scanner.nextLine();
+                    String ipAddress = detectLocalIpAddress();
+                    System.out.println("Detected IP Address: " + ipAddress);
+
+                    if (deviceDAO.registerOrUpdateDevice(currentUser.getUserId(), fingerprint, ipAddress)) {
+                        System.out.println("[SUCCESS] Device tracked successfully.");
+                    } else {
+                        System.out.println("[ERROR] Could not track this device.");
+                    }
+                    break;
+
+                case 2:
+                    if (isAdmin) {
+                        deviceDAO.viewAllConnectedDevices();
+                    } else {
+                        deviceDAO.viewConnectedDevicesByUser(currentUser.getUserId());
+                    }
+                    break;
+
+                case 3:
+                    System.out.print("Enter Device ID to disconnect: ");
+                    int deviceId = scanner.nextInt();
+                    scanner.nextLine();
+
+                    boolean disconnected;
+                    if (isAdmin) {
+                        disconnected = deviceDAO.disconnectDeviceAsAdmin(deviceId);
+                    } else {
+                        disconnected = deviceDAO.disconnectOwnDevice(deviceId, currentUser.getUserId());
+                    }
+
+                    if (disconnected) {
+                        System.out.println("[SUCCESS] Device disconnected.");
+                    } else {
+                        System.out.println("[ERROR] Disconnect failed. Check Device ID/permissions.");
+                    }
+                    break;
+
+                case 4:
+                    return;
+
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    private static String detectLocalIpAddress() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (networkInterface.isUp() == false || networkInterface.isLoopback()
+                        || networkInterface.isVirtual()) {
+                    continue;
+                }
+
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (address instanceof Inet4Address && address.isLoopbackAddress() == false) {
+                        return address.getHostAddress();
+                    }
+                }
+            }
+
+            return InetAddress.getLocalHost().getHostAddress();
+        } catch (SocketException | UnknownHostException e) {
+            return "UNKNOWN";
         }
     }
 }

@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class EventDAO {
 
@@ -35,7 +36,7 @@ public class EventDAO {
                         rs.getString("severity"));
             }
 
-            if (!hasEvents) {
+            if (hasEvents == false) {
                 System.out.println("No events logged yet.");
             }
             System.out.println("=======================================================================\n");
@@ -46,11 +47,11 @@ public class EventDAO {
         }
     }
 
-    public boolean logEvent(int sessionId, String eventType, int eventScore, String severity) {
+    public int logEventAndGetId(int sessionId, String eventType, int eventScore, String severity) {
         String query = "INSERT INTO event_logs (session_id, event_type, event_score, severity) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DBconnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(query)) {
+                PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, sessionId);
             stmt.setString(2, eventType);
@@ -58,12 +59,22 @@ public class EventDAO {
             stmt.setString(4, severity);
 
             int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
+            if (rowsAffected > 0) {
+                try (ResultSet keys = stmt.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        return keys.getInt(1);
+                    }
+                }
+            }
 
         } catch (SQLException e) {
             System.out.println("Failed to log event. Ensure the Session ID exists.");
             e.printStackTrace();
         }
-        return false;
+        return -1;
+    }
+
+    public boolean logEvent(int sessionId, String eventType, int eventScore, String severity) {
+        return logEventAndGetId(sessionId, eventType, eventScore, severity) > 0;
     }
 }
