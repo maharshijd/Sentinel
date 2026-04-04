@@ -5,8 +5,10 @@ import model.User;
 import service.AuthService;
 import dao.AlertDAO;
 import dao.DeviceDAO;
+import dao.DeviceDetailsDAO;
 import dao.EventDAO;
 import dao.SecurityRuleDAO;
+import dao.SessionDetailsDAO;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -23,7 +25,9 @@ public class Main {
     private static AlertDAO alertDAO = new AlertDAO();
     private static EventDAO eventDAO = new EventDAO();
     private static DeviceDAO deviceDAO = new DeviceDAO();
+    private static DeviceDetailsDAO deviceDetailsDAO = new DeviceDetailsDAO();
     private static SecurityRuleDAO securityRuleDAO = new SecurityRuleDAO();
+    private static SessionDetailsDAO sessionDetailsDAO = new SessionDetailsDAO();
     private static User currentUser = null;
 
     public static void main(String[] args) {
@@ -63,6 +67,10 @@ public class Main {
                     System.out.println("\n[ERROR] Invalid email or password.");
                 } else {
                     System.out.println("\n[SUCCESS] Login successful. Welcome " + currentUser.getEmail());
+                    int sessionId = sessionDetailsDAO.createSession(currentUser.getUserId(), detectLocalIpAddress());
+                    if (sessionId > 0) {
+                        System.out.println("[SESSION] Session details recorded with Session ID: " + sessionId);
+                    }
                 }
                 break;
             case 2:
@@ -96,8 +104,9 @@ public class Main {
         System.out.println("3. View Event Logs");
         System.out.println("4. Simulate Security Event");
         System.out.println("5. Track Connected Devices");
-        System.out.println("6. Set Security Rules");
-        System.out.println("7. Logout");
+        System.out.println("6. Manage Session / Device Details");
+        System.out.println("7. Set Security Rules");
+        System.out.println("8. Logout");
         System.out.print("Enter choice: ");
 
         int choice = scanner.nextInt();
@@ -136,13 +145,16 @@ public class Main {
                 showDeviceTrackingMenu();
                 break;
             case 6:
+                showSessionAndDeviceDetailsMenu();
+                break;
+            case 7:
                 if (currentUser.getRoleName().equalsIgnoreCase("ADMIN")) {
                     showSecurityRulesMenu();
                 } else {
                     System.out.println("\n[DENIED] Only admins can manage security rules.");
                 }
                 break;
-            case 7:
+            case 8:
                 currentUser = null;
                 System.out.println("Logged out successfully.");
                 break;
@@ -357,6 +369,56 @@ public class Main {
                     } else {
                         System.out.println("[ERROR] Disconnect failed. Check Device ID/permissions.");
                     }
+                    break;
+
+                case 4:
+                    return;
+
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    private static void showSessionAndDeviceDetailsMenu() {
+        boolean isAdmin = currentUser.getRoleName().equalsIgnoreCase("ADMIN");
+
+        while (true) {
+            System.out.println("\n--- SESSION / DEVICE DETAILS ---");
+            System.out.println("1. Add Device Details");
+            System.out.println("2. View All Device Details");
+            System.out.println("3. View My Session Details");
+            System.out.println("4. Back to Dashboard");
+            System.out.print("Enter choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter MAC Address: ");
+                    String macAddress = scanner.nextLine();
+                    System.out.print("Enter OS Version: ");
+                    String osVersion = scanner.nextLine();
+
+                    int deviceId = deviceDetailsDAO.saveDeviceDetails(macAddress, osVersion);
+                    if (deviceId > 0) {
+                        System.out.println("[SUCCESS] Device details saved with Device ID: " + deviceId);
+                    } else {
+                        System.out.println("[ERROR] Could not save device details.");
+                    }
+                    break;
+
+                case 2:
+                    if (isAdmin) {
+                        deviceDetailsDAO.viewAllDevices();
+                    } else {
+                        System.out.println("\n[DENIED] Only admins can view all device details.");
+                    }
+                    break;
+
+                case 3:
+                    sessionDetailsDAO.viewSessionsByUser(currentUser.getUserId());
                     break;
 
                 case 4:
