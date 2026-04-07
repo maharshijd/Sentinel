@@ -27,8 +27,10 @@ public class AlertDAO {
             System.out.println("-----------------------------------------------------------------------");
 
             boolean hasAlerts = false;
+
             while (rs.next()) {
                 hasAlerts = true;
+
                 System.out.printf("%-10d | %-25s | %-12s | %-10s | %-6d%n",
                         rs.getInt("alert_id"),
                         rs.getString("alert_type"),
@@ -37,9 +39,10 @@ public class AlertDAO {
                         rs.getInt("event_score"));
             }
 
-            if (hasAlerts == false) {
+            if (!hasAlerts) {
                 System.out.println("No alerts found in the system.");
             }
+
             System.out.println("=======================================================================\n");
 
         } catch (SQLException e) {
@@ -49,15 +52,19 @@ public class AlertDAO {
     }
 
     public boolean createAlertFromEvent(int eventId, String alertType, String securityLevel) {
-        String query = "INSERT INTO alerts (event_id, alert_type, security_level, alert_status, created_time) "
-                + "VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP)";
+
+        String query = "INSERT INTO alerts (event_id, alert_type, security_level, alert_status, created_time) " +
+                "VALUES (?, ?, ?, 'active', CURRENT_TIMESTAMP)";
 
         try (Connection conn = DBconnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
+
             stmt.setInt(1, eventId);
             stmt.setString(2, alertType);
             stmt.setString(3, securityLevel.toUpperCase());
+
             return stmt.executeUpdate() > 0;
+
         } catch (SQLException e) {
             System.out.println("Error creating alert from rule.");
             e.printStackTrace();
@@ -66,36 +73,56 @@ public class AlertDAO {
     }
 
     public boolean resolveAlert(int alertId, int currentUserId, String actionTaken) {
-        String updateAlertQuery = "UPDATE alerts SET alert_status = 'resolved' WHERE alert_id = ?";
+
+        String updateAlertQuery = "UPDATE alerts " +
+                "SET alert_status = 'resolved' " +
+                "WHERE alert_id = ? AND alert_status = 'active'";
+
         String insertRemediationQuery = "INSERT INTO remediation (alert_id, admin_id, status, action_taken, resolved_time) "
-                + "VALUES (?, (SELECT admin_id FROM admin WHERE user_id = ?), 'resolved', ?, CURRENT_TIMESTAMP)";
+                +
+                "VALUES (?, (SELECT admin_id FROM admin WHERE user_id = ?), 'resolved', ?, CURRENT_TIMESTAMP)";
 
         try (Connection conn = DBconnection.getConnection()) {
+
             conn.setAutoCommit(false);
 
-            try (PreparedStatement updateStmt = conn.prepareStatement(updateAlertQuery);
+            try (
+                    PreparedStatement updateStmt = conn.prepareStatement(updateAlertQuery);
                     PreparedStatement insertStmt = conn.prepareStatement(insertRemediationQuery)) {
 
                 updateStmt.setInt(1, alertId);
+
                 int rowsUpdated = updateStmt.executeUpdate();
 
                 if (rowsUpdated > 0) {
+
                     insertStmt.setInt(1, alertId);
                     insertStmt.setInt(2, currentUserId);
                     insertStmt.setString(3, actionTaken);
+
                     insertStmt.executeUpdate();
 
                     conn.commit();
+
                     return true;
+                } else {
+
+                    System.out.println("Alert already resolved OR invalid alert ID.");
                 }
+
             } catch (SQLException ex) {
+
                 conn.rollback();
+
                 System.out.println("Error processing resolution. Transaction rolled back.");
                 ex.printStackTrace();
             }
+
         } catch (SQLException e) {
+
             e.printStackTrace();
         }
+
         return false;
     }
 }
