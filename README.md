@@ -1,76 +1,222 @@
-# SENTINEL – System Activity Monitoring & Alert Platform
+# SENTINEL – Cybersecurity Monitoring System
 
-## Overview
+SENTINEL is a console-based cybersecurity monitoring system built using **Java, JDBC, and MySQL**.  
+It simulates real-world security monitoring operations such as event logging, alert generation, rule-based threat detection, device tracking, and role-based access control.
 
-SENTINEL is a system designed to monitor user activities within an application and detect suspicious behavior. The platform records login attempts, system events, and administrative actions while generating alerts when predefined security policies are violated.
+The system follows a layered architecture:
 
-The goal of the project is to demonstrate the practical implementation of database management concepts such as relational schema design, activity logging, and security monitoring.
+Model → DAO → Service → Main
 
-## Technologies Used
 
-Frontend: React (planned)
-Backend: Java (Servlets)
-Database: MariaDB
-Database Access: JDBC
-Version Control: Git
+# Features
 
-## Current Progress
+## Authentication System
+User registration and login using secure password hashing (SHA-256).
 
-The following components have been completed so far:
+Supports role-based access control:
+- Admin users
+- Normal users
 
-### 1. Database Design
+Each login session is recorded with IP address.
 
-A complete relational schema has been designed for the SENTINEL system including entities for users, sessions, events, alerts, and security policies.
 
-### 2. Database Implementation
+## Security Event Monitoring
+Security events can be logged with:
+- event type
+- threat score
+- severity level
 
-The database has been created in MariaDB and all required tables have been implemented.
+Recent events can be viewed in tabular format.
 
-### 3. Database Export
 
-The database schema has been exported to a SQL file:
+## Rule-Based Alert Engine
+Admin can create security rules based on:
+- event score thresholds
+- event type matching
 
-database/sentinel_db.sql
+When an event satisfies a rule condition, an alert is automatically generated.
 
-This file allows the database structure to be recreated easily.
+Example:
+If event_score > 70 → create HIGH severity alert.
 
-### 4. Backend Setup
 
-The backend project folder has been created with the following structure:
+## Alert Management
+System stores alerts generated from suspicious activity.
 
-backend/
-├── src/
-│   ├── db/
-│   │   └── DBConnection.java
-│   └── TestConnection.java
+Admin can:
+- view alerts
+- resolve alerts
+- record remediation actions
 
-### 5. Database Connection
+System prevents resolving the same alert multiple times.
 
-A Java utility class `DBConnection.java` has been implemented to establish a connection with the MariaDB database using JDBC.
 
-This class handles:
+## Device Tracking
+Tracks devices connected to the system using:
+- IP address
+- device fingerprint
+- operating system info
 
-* loading the MariaDB JDBC driver
-* connecting to the database
-* returning a connection object for use in other backend classes
+Admin can view all connected devices.
+Normal users can view only their own devices.
 
-### 6. Connection Testing
+Devices can be disconnected.
 
-A test class (`TestConnection.java`) has been created to verify that the Java backend can successfully connect to the MariaDB database.
 
-## Next Steps
+## Session Tracking
+Each login creates a session record.
 
-The next stages of the project will include:
+Stores:
+- user id
+- IP address
+- login timestamp
 
-* Creating DAO classes for database operations
-* Implementing servlet endpoints for backend logic
-* Developing the React frontend interface
-* Connecting frontend requests to backend APIs
-* Implementing event logging and alert generation
+Users can view their session history.
 
-## Authors
 
-Maharshi Dindoliwala
-Manan Khanna
-Mansi Uttamchandani
-Ojas Barve
+## File Access Monitoring
+Simulates file access permissions.
+
+Logs events when:
+- file access is allowed
+- unauthorized access attempt occurs
+
+Unauthorized attempts can generate alerts through rule engine.
+
+
+# Role Based Access Control (RBAC)
+
+## Admin privileges
+- View all alerts  
+- Resolve alerts  
+- Create security rules  
+- Enable or disable rules  
+- View all connected devices  
+- Disconnect any device  
+- View all device details  
+- Simulate security events  
+
+
+## Normal user privileges
+- View alerts  
+- View event logs  
+- Track own devices  
+- Disconnect own devices  
+- View own session history  
+
+
+# Technologies Used
+
+- Java
+- JDBC
+- MySQL
+- SHA-256 password hashing
+- Console-based interface
+
+
+# Project Structure
+Sentinel
+│
+├── config
+│ DBconnection.java
+│
+├── model
+│ Alert.java
+│ ConnectedDevice.java
+│ DeviceDetails.java
+│ EventLog.java
+│ SecurityRule.java
+│ SessionDetails.java
+│ User.java
+│
+├── dao
+│ AlertDAO.java
+│ DeviceDAO.java
+│ DeviceDetailsDAO.java
+│ EventDAO.java
+│ FilePermissionsDAO.java
+│ SecurityRuleDAO.java
+│ SessionDetailsDAO.java
+│ UserDAO.java
+│
+├── service
+│ AuthService.java
+│ FileSecurityService.java
+│
+├── main
+│ Main.java
+
+
+
+
+# Database Tables
+
+- user  
+- role  
+- department  
+- alerts  
+- event_logs  
+- security_rules  
+- connected_devices  
+- device_details  
+- session_details  
+- file_permissions  
+- remediation  
+
+
+# How the system works
+
+User logs in  
+Session is created  
+User performs action  
+Event is logged  
+Rules are evaluated  
+Alert is generated if rule condition matches  
+
+
+# Example Workflow
+
+Admin creates rule:
+EVENT_SCORE > 70 → HIGH alert
+
+User performs suspicious action:
+event_score = 85
+
+System automatically:
+- logs event  
+- checks rules  
+- generates alert  
+
+Admin resolves alert with remediation note.
+
+
+# How to Run
+
+1. Create MySQL database
+2. Update DB credentials in:
+
+config/DBconnection.java
+
+3. Compile project
+4. Run Main.java
+
+
+# Learning Objectives
+
+- Understanding DAO pattern  
+- Implementing RBAC (Role Based Access Control)  
+- Using JDBC with MySQL  
+- Password hashing using SHA-256  
+- Designing rule-based detection systems  
+- Implementing layered architecture  
+
+
+# Future Improvements
+
+- Web interface (Spring Boot)
+- Real-time alert dashboard
+- Email notifications
+- JWT authentication
+- REST API integration
+- Advanced rule engine
+- Machine learning anomaly detection
