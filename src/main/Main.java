@@ -20,7 +20,7 @@ public class Main {
 
     public static void main(String[] args) {
         System.out.println("==================================================");
-        System.out.println("      SENTINEL CYBERSECURITY MONITORING SYSTEM    ");
+        System.out.println("            SENTINEL MONITORING SYSTEM    ");
         System.out.println("==================================================");
         while (true) {
             if (currentUser == null)
