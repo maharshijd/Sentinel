@@ -83,6 +83,27 @@ public class SessionDetailsDAO {
         return null;
     }
 
+    public int getLatestSessionId(int userId) {
+
+        String query = "SELECT session_id FROM session_details WHERE user_id=? ORDER BY start_time DESC LIMIT 1";
+
+        try (Connection conn = DBconnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, userId);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next())
+                return rs.getInt("session_id");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
     public void viewSessionsByUser(int userId) {
         String query = "SELECT session_id, ip_address, start_time "
                 + "FROM session_details WHERE user_id = ? ORDER BY start_time DESC";

@@ -86,6 +86,10 @@ public class Main {
         }
         System.out.print("Password: ");
         String pass = scanner.nextLine();
+        if (pass.length() < 6) {
+            System.out.println("[ERROR] Password must be at least 6 characters long");
+            return;
+        }
         System.out.print("Role (1=Admin 2=User): ");
         int role = scanner.nextInt();
         System.out.print("Department id: ");
@@ -179,17 +183,28 @@ public class Main {
     }
 
     private static void simulateSecurityEvent() {
-        System.out.print("Session id: ");
-        int sid = scanner.nextInt();
-        scanner.nextLine();
+
+        int sessionId = sessionDetailsDAO.getLatestSessionId(currentUser.getUserId());
+
+        if (sessionId == -1) {
+
+            System.out.println("No active session found");
+
+            return;
+        }
+
         System.out.print("Event type: ");
         String type = scanner.nextLine();
+
         System.out.print("Score: ");
         int score = scanner.nextInt();
         scanner.nextLine();
+
         System.out.print("Severity: ");
         String severity = scanner.nextLine();
-        int eventId = eventDAO.logEventAndGetId(sid, type, score, severity);
+
+        int eventId = eventDAO.logEventAndGetId(sessionId, type, score, severity);
+
         if (eventId > 0)
             evaluateRulesForEvent(eventId, type, score);
     }
