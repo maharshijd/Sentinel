@@ -80,6 +80,10 @@ public class Main {
     private static void registerUser() {
         System.out.print("Email: ");
         String email = scanner.nextLine();
+        if (!email.contains("@") || !email.contains(".")) {
+            System.out.println("[ERROR] Invalid email");
+            return;
+        }
         System.out.print("Password: ");
         String pass = scanner.nextLine();
         System.out.print("Role (1=Admin 2=User): ");
