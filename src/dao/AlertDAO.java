@@ -74,17 +74,42 @@ public class AlertDAO {
 
     public boolean resolveAlert(int alertId, int currentUserId, String actionTaken) {
 
-        String updateAlertQuery = "UPDATE alerts " +
-                "SET alert_status = 'resolved' " +
-                "WHERE alert_id = ? AND alert_status = 'active'";
+        String checkAdminQuery = "SELECT admin_id FROM admin WHERE user_id=?";
 
-        String insertRemediationQuery = "INSERT INTO remediation (alert_id, admin_id, status, action_taken, resolved_time) "
-                +
-                "VALUES (?, (SELECT admin_id FROM admin WHERE user_id = ?), 'resolved', ?, CURRENT_TIMESTAMP)";
+        String updateAlertQuery = "UPDATE alerts SET alert_status='resolved' WHERE alert_id=? AND alert_status='active'";
+
+        String insertRemediationQuery = "INSERT INTO remediation(alert_id,admin_id,status,action_taken,resolved_time) VALUES(?,?, 'resolved',?,CURRENT_TIMESTAMP)";
 
         try (Connection conn = DBconnection.getConnection()) {
 
             conn.setAutoCommit(false);
+
+            /* check admin id */
+
+            int adminId = -1;
+
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkAdminQuery)) {
+
+                checkStmt.setInt(1, currentUserId);
+
+                ResultSet rs = checkStmt.executeQuery();
+
+                if (rs.next())
+                    adminId = rs.getInt("admin_id");
+            }
+
+            /* if user not in admin table */
+
+            if (adminId == -1) {
+
+                System.out.println("User is not registered as admin.");
+
+                conn.rollback();
+
+                return false;
+            }
+
+            /* resolve alert */
 
             try (
                     PreparedStatement updateStmt = conn.prepareStatement(updateAlertQuery);
@@ -97,7 +122,9 @@ public class AlertDAO {
                 if (rowsUpdated > 0) {
 
                     insertStmt.setInt(1, alertId);
-                    insertStmt.setInt(2, currentUserId);
+
+                    insertStmt.setInt(2, adminId);
+
                     insertStmt.setString(3, actionTaken);
 
                     insertStmt.executeUpdate();
@@ -105,20 +132,26 @@ public class AlertDAO {
                     conn.commit();
 
                     return true;
-                } else {
+                }
+
+                else {
 
                     System.out.println("Alert already resolved OR invalid alert ID.");
                 }
+            }
 
-            } catch (SQLException ex) {
+            catch (SQLException ex) {
 
                 conn.rollback();
 
-                System.out.println("Error processing resolution. Transaction rolled back.");
+                System.out.println("Error processing resolution.");
+
                 ex.printStackTrace();
             }
 
-        } catch (SQLException e) {
+        }
+
+        catch (SQLException e) {
 
             e.printStackTrace();
         }

@@ -23,11 +23,10 @@ public class Main {
         System.out.println("      SENTINEL CYBERSECURITY MONITORING SYSTEM    ");
         System.out.println("==================================================");
         while (true) {
-            if (currentUser == null) {
+            if (currentUser == null)
                 showMainMenu();
-            } else {
+            else
                 showDashboard();
-            }
         }
     }
 
@@ -37,50 +36,60 @@ public class Main {
 
     private static void showMainMenu() {
         System.out.println("\n--- MAIN MENU ---");
-        System.out.println("1. Login");
-        System.out.println("2. Register User");
-        System.out.println("3. Exit");
-        System.out.print("Enter choice: ");
+        System.out.println("1 Login");
+        System.out.println("2 Register User");
+        System.out.println("3 Exit");
+        System.out.print("Choice: ");
         int choice = scanner.nextInt();
         scanner.nextLine();
         switch (choice) {
             case 1:
-                System.out.print("Email: ");
-                String email = scanner.nextLine();
-                System.out.print("Password: ");
-                String pass = scanner.nextLine();
-                currentUser = authService.login(email, pass);
-                if (currentUser == null) {
-                    System.out.println("\n[ERROR] Invalid email or password.");
-                } else {
-                    System.out.println("\n[SUCCESS] Login successful. Welcome " + currentUser.getEmail());
-                    int sessionId = sessionDetailsDAO.createSession(currentUser.getUserId(), detectLocalIpAddress());
-                    if (sessionId > 0) {
-                        System.out.println("[SESSION] Session ID: " + sessionId);
-                    }
-                }
+                loginUser();
                 break;
             case 2:
-                System.out.print("New Email: ");
-                String newEmail = scanner.nextLine();
-                System.out.print("New Password: ");
-                String newPass = scanner.nextLine();
-                System.out.print("Role ID (1=Admin, 2=Normal): ");
-                int role = scanner.nextInt();
-                System.out.print("Department ID: ");
-                int dept = scanner.nextInt();
-                if (authService.register(newEmail, newPass, role, dept)) {
-                    System.out.println("[SUCCESS] Registration successful.");
-                } else {
-                    System.out.println("[ERROR] Registration failed.");
-                }
+                registerUser();
                 break;
             case 3:
-                System.out.println("Shutting down SENTINEL.");
+                System.out.println("System shutting down");
                 System.exit(0);
             default:
                 System.out.println("Invalid choice");
         }
+    }
+
+    private static void loginUser() {
+        System.out.print("Email: ");
+        String email = scanner.nextLine();
+        System.out.print("Password: ");
+        String pass = scanner.nextLine();
+        User tempUser = authService.login(email, pass);
+        if (tempUser == null) {
+            System.out.println("[ERROR] Invalid email or password");
+            int eventId = eventDAO.logEventAndGetId(1, "LOGIN_FAILED", 80, "HIGH");
+            if (eventId > 0)
+                evaluateRulesForEvent(eventId, "LOGIN_FAILED", 80);
+        } else {
+            currentUser = tempUser;
+            System.out.println("[SUCCESS] Welcome " + currentUser.getEmail());
+            int sessionId = sessionDetailsDAO.createSession(currentUser.getUserId(), detectLocalIpAddress());
+            if (sessionId > 0)
+                System.out.println("Session ID: " + sessionId);
+        }
+    }
+
+    private static void registerUser() {
+        System.out.print("Email: ");
+        String email = scanner.nextLine();
+        System.out.print("Password: ");
+        String pass = scanner.nextLine();
+        System.out.print("Role (1=Admin 2=User): ");
+        int role = scanner.nextInt();
+        System.out.print("Department id: ");
+        int dept = scanner.nextInt();
+        if (authService.register(email, pass, role, dept))
+            System.out.println("User created");
+        else
+            System.out.println("Registration failed");
     }
 
     private static void showDashboard() {
@@ -90,101 +99,98 @@ public class Main {
             System.out.println("2 Resolve Alert");
             System.out.println("3 View Events");
             System.out.println("4 Simulate Event");
-            System.out.println("5 Device Tracking");
-            System.out.println("6 Session Details");
-            System.out.println("7 Security Rules");
-            System.out.println("8 Logout");
+            System.out.println("5 Sessions");
+            System.out.println("6 Rules");
+            System.out.println("7 Logout");
         } else {
             System.out.println("1 View Alerts");
             System.out.println("2 View Events");
-            System.out.println("3 Device Tracking");
-            System.out.println("4 Session Details");
-            System.out.println("5 Logout");
+            System.out.println("3 Sessions");
+            System.out.println("4 Logout");
         }
         System.out.print("Choice: ");
         int choice = scanner.nextInt();
         scanner.nextLine();
-        if (isAdmin()) {
-            switch (choice) {
-                case 1:
-                    alertDAO.viewAllAlerts();
-                    break;
-                case 2:
-                    alertDAO.viewAllAlerts();
-                    System.out.print("Alert ID: ");
-                    int alertId = scanner.nextInt();
-                    scanner.nextLine();
-                    System.out.print("Action taken: ");
-                    String action = scanner.nextLine();
-                    alertDAO.resolveAlert(alertId, currentUser.getUserId(), action);
-                    break;
-                case 3:
-                    eventDAO.viewAllEvents();
-                    break;
-                case 4:
-                    simulateSecurityEvent();
-                    break;
-                case 5:
-                    showDeviceTrackingMenu();
-                    break;
-                case 6:
-                    showSessionMenu();
-                    break;
-                case 7:
-                    showRuleMenu();
-                    break;
-                case 8:
-                    logout();
-                    break;
-                default:
-                    System.out.println("Invalid choice");
-            }
-        } else {
-            switch (choice) {
-                case 1:
-                    alertDAO.viewAllAlerts();
-                    break;
-                case 2:
-                    eventDAO.viewAllEvents();
-                    break;
-                case 3:
-                    showDeviceTrackingMenu();
-                    break;
-                case 4:
-                    showSessionMenu();
-                    break;
-                case 5:
-                    logout();
-                    break;
-                default:
-                    System.out.println("Invalid choice");
-            }
+        if (isAdmin())
+            adminActions(choice);
+        else
+            userActions(choice);
+    }
+
+    private static void adminActions(int c) {
+        switch (c) {
+            case 1:
+                alertDAO.viewAllAlerts();
+                break;
+            case 2:
+                resolveAlert();
+                break;
+            case 3:
+                eventDAO.viewAllEvents();
+                break;
+            case 4:
+                simulateSecurityEvent();
+                break;
+            case 5:
+                sessionDetailsDAO.viewSessionsByUser(currentUser.getUserId());
+                break;
+            case 6:
+                showSecurityRulesMenu();
+                break;
+            case 8:
+                logout();
+                break;
+            default:
+                System.out.println("Invalid");
         }
     }
 
-    private static void logout() {
-        currentUser = null;
-        System.out.println("Logged out successfully.");
+    private static void userActions(int c) {
+        switch (c) {
+            case 1:
+                alertDAO.viewAllAlerts();
+                break;
+            case 2:
+                eventDAO.viewAllEvents();
+                break;
+            case 3:
+                sessionDetailsDAO.viewSessionsByUser(currentUser.getUserId());
+                break;
+            case 4:
+                logout();
+                break;
+            default:
+                System.out.println("Invalid");
+        }
+    }
+
+    private static void resolveAlert() {
+        alertDAO.viewAllAlerts();
+        System.out.print("Alert id: ");
+        int id = scanner.nextInt();
+        scanner.nextLine();
+        System.out.print("Action: ");
+        String action = scanner.nextLine();
+        alertDAO.resolveAlert(id, currentUser.getUserId(), action);
     }
 
     private static void simulateSecurityEvent() {
-        System.out.print("Session ID: ");
-        int sessionId = scanner.nextInt();
+        System.out.print("Session id: ");
+        int sid = scanner.nextInt();
         scanner.nextLine();
-        System.out.print("Event Type: ");
+        System.out.print("Event type: ");
         String type = scanner.nextLine();
         System.out.print("Score: ");
         int score = scanner.nextInt();
         scanner.nextLine();
         System.out.print("Severity: ");
         String severity = scanner.nextLine();
-        int eventId = eventDAO.logEventAndGetId(sessionId, type, score, severity);
-        if (eventId > 0) {
-            evaluateRules(eventId, type, score);
-        }
+        int eventId = eventDAO.logEventAndGetId(sid, type, score, severity);
+        if (eventId > 0)
+            evaluateRulesForEvent(eventId, type, score);
     }
 
-    private static void evaluateRules(int eventId, String type, int score) {
+    private static void evaluateRulesForEvent(int eventId, String type, int score) {
         List<SecurityRule> rules = securityRuleDAO.getActiveRules();
         for (SecurityRule r : rules) {
             if (ruleMatch(r, type, score)) {
@@ -198,32 +204,46 @@ public class Main {
             int t = Integer.parseInt(r.getThresholdValue());
             if (r.getOperatorType().equals("GT"))
                 return score > t;
+            if (r.getOperatorType().equals("GTE"))
+                return score >= t;
+        }
+        if (r.getMetricType().equalsIgnoreCase("EVENT_TYPE")) {
+            return type.equalsIgnoreCase(r.getThresholdValue());
         }
         return false;
     }
 
-    private static void showRuleMenu() {
-        System.out.println("1 Create Rule");
-        System.out.println("2 View Rules");
+    private static void showSecurityRulesMenu() {
+        System.out.println("1 Create rule");
+        System.out.println("2 View rules");
         int c = scanner.nextInt();
         scanner.nextLine();
         if (c == 1) {
             System.out.print("Rule name: ");
             String name = scanner.nextLine();
-            securityRuleDAO.createRule(name, "EVENT_SCORE", "GT", "50", "HIGH", currentUser.getUserId());
+            System.out.print("Metric type: ");
+            String metric = scanner.nextLine();
+            System.out.print("Operator: ");
+            String op = scanner.nextLine();
+            System.out.print("Threshold: ");
+            String val = scanner.nextLine();
+            System.out.print("Severity: ");
+            String sev = scanner.nextLine();
+            securityRuleDAO.createRule(name, metric, op, val, sev, currentUser.getUserId());
         } else {
             securityRuleDAO.viewAllRules();
         }
     }
 
     private static void showDeviceTrackingMenu() {
-        System.out.println("Device fingerprint:");
+        System.out.print("Fingerprint: ");
         String f = scanner.nextLine();
         deviceDAO.registerOrUpdateDevice(currentUser.getUserId(), f, detectLocalIpAddress());
     }
 
-    private static void showSessionMenu() {
-        sessionDetailsDAO.viewSessionsByUser(currentUser.getUserId());
+    private static void logout() {
+        currentUser = null;
+        System.out.println("Logged out");
     }
 
     private static String detectLocalIpAddress() {
