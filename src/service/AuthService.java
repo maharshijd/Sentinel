@@ -18,6 +18,19 @@ public class AuthService {
         return userDAO.registerUser(email, hashedPass, roleId, deptId);
     }
 
+    public boolean isValidEmail(String email) {
+        if (email == null) {
+            return false;
+        }
+
+        String trimmedEmail = email.trim();
+        int atIndex = trimmedEmail.indexOf('@');
+
+        return atIndex > 0
+                && atIndex == trimmedEmail.lastIndexOf('@')
+                && atIndex < trimmedEmail.length() - 1;
+    }
+
     private String hashPassword(String password) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

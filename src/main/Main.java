@@ -57,9 +57,14 @@ public class Main {
         switch (choice) {
             case 1:
                 System.out.print("Email: ");
-                String email = scanner.nextLine();
+                String email = scanner.nextLine().trim();
                 System.out.print("Password: ");
                 String pass = scanner.nextLine();
+
+                if (!authService.isValidEmail(email)) {
+                    System.out.println("\n[ERROR] Please enter a valid email address.");
+                    break;
+                }
 
                 currentUser = authService.login(email, pass);
 
