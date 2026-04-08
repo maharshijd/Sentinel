@@ -137,7 +137,7 @@ public class Main {
             case 6:
                 showSecurityRulesMenu();
                 break;
-            case 8:
+            case 7:
                 logout();
                 break;
             default:
