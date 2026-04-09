@@ -1,5 +1,7 @@
 package main;
 
+import model.Admin;
+import model.NormalUser;
 import model.SecurityRule;
 import model.User;
 import service.AuthService;
@@ -69,9 +71,25 @@ public class Main {
             if (eventId > 0)
                 evaluateRulesForEvent(eventId, "LOGIN_FAILED", 80);
         } else {
-            currentUser = tempUser;
+            if (tempUser.getRoleName().equalsIgnoreCase("ADMIN"))
+                currentUser = new Admin(
+                        tempUser.getUserId(),
+                        tempUser.getEmail(),
+                        tempUser.getRoleId(),
+                        tempUser.getDeptId(),
+                        tempUser.getRoleName());
+            else
+                currentUser = new NormalUser(
+                        tempUser.getUserId(),
+                        tempUser.getEmail(),
+                        tempUser.getRoleId(),
+                        tempUser.getDeptId(),
+                        tempUser.getRoleName());
+            currentUser.showRoleMessage();
             System.out.println("[SUCCESS] Welcome " + currentUser.getEmail());
-            int sessionId = sessionDetailsDAO.createSession(currentUser.getUserId(), detectLocalIpAddress());
+            int sessionId = sessionDetailsDAO.createSession(
+                    currentUser.getUserId(),
+                    detectLocalIpAddress());
             if (sessionId > 0)
                 System.out.println("Session ID: " + sessionId);
         }

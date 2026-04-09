@@ -1,6 +1,6 @@
 package model;
 
-public class User {
+public class User implements UserRole {
     private int userId;
     private String email;
     private int roleId;
@@ -13,6 +13,11 @@ public class User {
         this.roleId = roleId;
         this.deptId = deptId;
         this.roleName = roleName;
+    }
+
+    @Override
+    public void showRoleMessage() {
+        System.out.println("User logged in");
     }
 
     public int getUserId() {
