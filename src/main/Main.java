@@ -44,6 +44,7 @@ public class Main {
         System.out.print("Choice: ");
         int choice = scanner.nextInt();
         scanner.nextLine();
+
         switch (choice) {
             case 1:
                 loginUser();
@@ -98,20 +99,26 @@ public class Main {
     private static void registerUser() {
         System.out.print("Email: ");
         String email = scanner.nextLine();
-        if (!email.contains("@") || !email.contains(".")) {
-            System.out.println("[ERROR] Invalid email");
+
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            System.out.println("Invalid email format");
             return;
         }
+
         System.out.print("Password: ");
         String pass = scanner.nextLine();
-        if (pass.length() < 6) {
-            System.out.println("[ERROR] Password must be at least 6 characters long");
-            return;
-        }
+
         System.out.print("Role (1=Admin 2=User): ");
         int role = scanner.nextInt();
+
+        if (role != 1 && role != 2) {
+            System.out.println("Invalid role");
+            return;
+        }
+
         System.out.print("Department id: ");
         int dept = scanner.nextInt();
+
         if (authService.register(email, pass, role, dept))
             System.out.println("User created");
         else
