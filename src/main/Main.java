@@ -134,7 +134,8 @@ public class Main {
             System.out.println("4 Simulate Event");
             System.out.println("5 Sessions");
             System.out.println("6 Rules");
-            System.out.println("7 Logout");
+            System.out.println("7 Delete User");
+            System.out.println("8 Logout");
         } else {
             System.out.println("1 View Alerts");
             System.out.println("2 View Events");
@@ -171,6 +172,9 @@ public class Main {
                 showSecurityRulesMenu();
                 break;
             case 7:
+                deleteUser();
+                break;
+            case 8:
                 logout();
                 break;
             default:
@@ -255,6 +259,28 @@ public class Main {
             return type.equalsIgnoreCase(r.getThresholdValue());
         }
         return false;
+    }
+
+    private static void deleteUser() {
+        UserDAO dao = new UserDAO();
+        dao.viewAllUsers();
+        System.out.print("Enter user ID to delete: ");
+        int id;
+        try {
+            id = Integer.parseInt(scanner.nextLine());
+        } catch (Exception e) {
+            System.out.println("Invalid input");
+            return;
+        }
+        if (id == currentUser.getUserId()) {
+            System.out.println("Cannot delete logged in user");
+            return;
+        }
+        boolean deleted = dao.deleteUser(id);
+        if (deleted)
+            System.out.println("User deleted successfully");
+        else
+            System.out.println("User not found OR linked records exist");
     }
 
     private static void showSecurityRulesMenu() {

@@ -89,12 +89,16 @@ public class DeviceDAO {
                 PreparedStatement stmt = conn.prepareStatement(query);
                 ResultSet rs = stmt.executeQuery()) {
 
-            System.out.println("\n==================================================================================================");
-            System.out.println("                                      CONNECTED DEVICES                                           ");
-            System.out.println("==================================================================================================");
+            System.out.println(
+                    "\n==================================================================================================");
+            System.out.println(
+                    "                                      CONNECTED DEVICES                                           ");
+            System.out.println(
+                    "==================================================================================================");
             System.out.printf("%-10s | %-8s | %-28s | %-16s | %-12s%n",
                     "DEVICE ID", "USER ID", "EMAIL", "IP", "STATUS");
-            System.out.println("--------------------------------------------------------------------------------------------------");
+            System.out.println(
+                    "--------------------------------------------------------------------------------------------------");
 
             boolean hasDevices = false;
             while (rs.next()) {
@@ -110,7 +114,8 @@ public class DeviceDAO {
             if (!hasDevices) {
                 System.out.println("No tracked devices found.");
             }
-            System.out.println("==================================================================================================\n");
+            System.out.println(
+                    "==================================================================================================\n");
 
         } catch (SQLException e) {
             System.out.println("Error fetching connected devices.");
