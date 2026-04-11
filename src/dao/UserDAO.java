@@ -110,123 +110,69 @@ public class UserDAO {
         }
     }
 
-public boolean deleteUser(int userId){
+    public boolean deleteUser(int userId) {
 
-Connection conn=null;
+        Connection conn = null;
 
-try{
+        try {
 
-conn=DBconnection.getConnection();
+            conn = DBconnection.getConnection();
 
-conn.setAutoCommit(false);
+            conn.setAutoCommit(false);
 
-/* get session ids */
+            /* delete child records first */
 
-String getSessions=
-"SELECT session_id FROM session_details WHERE user_id=?";
+            String deleteSessions = "DELETE FROM session_details WHERE user_id=?";
 
-PreparedStatement ps0=conn.prepareStatement(getSessions);
+            String deleteDevices = "DELETE FROM connected_devices WHERE user_id=?";
 
-ps0.setInt(1,userId);
+            String deleteDeviceDetails = "DELETE FROM device_details WHERE user_id=?";
 
-ResultSet rs=ps0.executeQuery();
+            String deleteAdmin = "DELETE FROM admin WHERE user_id=?";
 
+            PreparedStatement s1 = conn.prepareStatement(deleteSessions);
+            s1.setInt(1, userId);
+            s1.executeUpdate();
 
+            PreparedStatement s2 = conn.prepareStatement(deleteDevices);
+            s2.setInt(1, userId);
+            s2.executeUpdate();
 
-while(rs.next()){
+            PreparedStatement s3 = conn.prepareStatement(deleteDeviceDetails);
+            s3.setInt(1, userId);
+            s3.executeUpdate();
 
-int sessionId=rs.getInt("session_id");
+            PreparedStatement s4 = conn.prepareStatement(deleteAdmin);
+            s4.setInt(1, userId);
+            s4.executeUpdate();
 
-/* delete events */
+            String deleteUserQuery = "DELETE FROM user WHERE user_id=?";
 
-PreparedStatement ps1=
-conn.prepareStatement(
-"DELETE FROM event_logs WHERE session_id=?"
-);
+            PreparedStatement s5 = conn.prepareStatement(deleteUserQuery);
 
-ps1.setInt(1,sessionId);
+            s5.setInt(1, userId);
 
-ps1.executeUpdate();
+            int rows = s5.executeUpdate();
 
+            conn.commit();
+
+            return rows > 0;
+
+        } catch (Exception e) {
+
+            try {
+
+                if (conn != null)
+                    conn.rollback();
+
+            } catch (Exception ex) {
+            }
+
+            System.out.println("Error deleting user");
+
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }
-
-
-
-/* delete sessions */
-
-PreparedStatement ps2=
-conn.prepareStatement(
-"DELETE FROM session_details WHERE user_id=?"
-);
-
-ps2.setInt(1,userId);
-
-ps2.executeUpdate();
-
-
-
-/* delete devices */
-
-PreparedStatement ps3=
-conn.prepareStatement(
-"DELETE FROM connected_devices WHERE user_id=?"
-);
-
-ps3.setInt(1,userId);
-
-ps3.executeUpdate();
-
-
-
-/* delete admin record */
-
-PreparedStatement ps4=
-conn.prepareStatement(
-"DELETE FROM admin WHERE user_id=?"
-);
-
-ps4.setInt(1,userId);
-
-ps4.executeUpdate();
-
-
-
-/* finally delete user */
-
-PreparedStatement ps5=
-conn.prepareStatement(
-"DELETE FROM user WHERE user_id=?"
-);
-
-ps5.setInt(1,userId);
-
-int rows=ps5.executeUpdate();
-
-
-
-conn.commit();
-
-return rows>0;
-
-}
-catch(Exception e){
-
-try{
-
-if(conn!=null)
-
-conn.rollback();
-
-}
-catch(Exception ex){}
-
-System.out.println("Delete failed due to related records");
-
-e.printStackTrace();
-}
-
-return false;
-}
-
-    return false;
-}}

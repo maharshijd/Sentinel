@@ -268,6 +268,7 @@ public class Main {
         int id;
         try {
             id = Integer.parseInt(scanner.nextLine());
+            System.out.println("User Deleted");
         } catch (Exception e) {
             System.out.println("Invalid input");
             return;
