@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DBconnection {
     private static final String URL = "jdbc:mysql://localhost:3306/sentinel_db";
     private static final String USER = "root";
-    private static final String PASSWORD = "jvmd1331";
+    private static final String PASSWORD = "xyz";
 
     public static Connection getConnection() throws SQLException {
         try {

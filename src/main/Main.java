@@ -23,7 +23,7 @@ public class Main {
     public static void main(String[] args) {
         System.out.println();
         System.out.println("==================================================");
-        System.out.println("            SENTINEL MONITORING SYSTEM    ");
+        System.out.println("||          SENTINEL MONITORING SYSTEM          ||");
         System.out.println("==================================================");
         while (true) {
             if (currentUser == null)
@@ -38,10 +38,10 @@ public class Main {
     }
 
     private static void showMainMenu() {
-        System.out.println("\n--- MAIN MENU ---");
-        System.out.println("1 Login");
-        System.out.println("2 Register User");
-        System.out.println("3 Exit");
+        System.out.println("||   1 Login                                    ||");
+        System.out.println("||   2 Register User                            ||");
+        System.out.println("||   3 Exit                                     ||");
+        System.out.println("==================================================");
         System.out.print("Choice: ");
         int choice = scanner.nextInt();
         scanner.nextLine();
@@ -127,23 +127,26 @@ public class Main {
     }
 
     private static void showDashboard() {
-        System.out.println("\n--- " + currentUser.getRoleName() + " DASHBOARD ---");
+        System.out.println("==================================================");
+        System.out.println("||               " + currentUser.getRoleName() + " DASHBOARD                ||");
+        System.out.println("==================================================");
         if (isAdmin()) {
-            System.out.println("1 View Alerts");
-            System.out.println("2 Resolve Alert");
-            System.out.println("3 View Events");
-            System.out.println("4 Simulate Event");
-            System.out.println("5 Sessions");
-            System.out.println("6 Rules");
-            System.out.println("7 View All users");
-            System.out.println("8 Delete User");
-            System.out.println("9 Logout");
+            System.out.println("||   1 View Alerts                              ||");
+            System.out.println("||   2 Resolve Alert                            ||");
+            System.out.println("||   3 View Events                              ||");
+            System.out.println("||   4 Simulate Event                           ||");
+            System.out.println("||   5 Sessions                                 ||");
+            System.out.println("||   6 Rules                                    ||");
+            System.out.println("||   7 View All users                           ||");
+            System.out.println("||   8 Delete User                              ||");
+            System.out.println("||   9 Logout                                   ||");
         } else {
-            System.out.println("1 View Alerts");
-            System.out.println("2 View Events");
-            System.out.println("3 Sessions");
-            System.out.println("4 Logout");
+            System.out.println("||   1 View Alerts                              ||");
+            System.out.println("||   2 View Events                              ||");
+            System.out.println("||   3 Sessions                                 ||");
+            System.out.println("||   4 Logout                                   ||");
         }
+        System.out.println("==================================================");
         System.out.print("Choice: ");
         int choice = scanner.nextInt();
         scanner.nextLine();
