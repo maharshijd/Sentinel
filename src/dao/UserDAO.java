@@ -1,11 +1,11 @@
 package dao;
 
 import config.DBconnection;
-import model.User;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import model.User;
 
 public class UserDAO {
 
@@ -80,7 +80,7 @@ public class UserDAO {
                 PreparedStatement stmt = conn.prepareStatement(query);
                 ResultSet rs = stmt.executeQuery()) {
 
-            System.out.println("\n========== USERS ==========");
+            System.out.println("\n==================== USERS ====================");
 
             System.out.printf(
                     "%-6s %-25s %-6s %-6s%n",
@@ -100,7 +100,7 @@ public class UserDAO {
                         rs.getInt("dept_id"));
             }
 
-            System.out.println("===========================\n");
+            System.out.println("===============================================\n");
 
         } catch (SQLException e) {
 
@@ -113,31 +113,22 @@ public class UserDAO {
     public boolean deleteUser(int userId) {
 
         Connection conn = null;
-
         try {
-
             conn = DBconnection.getConnection();
-
             conn.setAutoCommit(false);
-
-            /* delete child records first */
-
             String deleteSessions = "DELETE FROM session_details WHERE user_id=?";
-
             String deleteDevices = "DELETE FROM connected_devices WHERE user_id=?";
-
-            String deleteDeviceDetails = "DELETE FROM device_details WHERE user_id=?";
-
+            String deleteDeviceDetails = "DELETE FROM device_details WHERE device_id IN " + "(SELECT device_id FROM connected_devices WHERE user_id=?)";
             String deleteAdmin = "DELETE FROM admin WHERE user_id=?";
-
+            
             PreparedStatement s1 = conn.prepareStatement(deleteSessions);
             s1.setInt(1, userId);
             s1.executeUpdate();
-
+            
             PreparedStatement s2 = conn.prepareStatement(deleteDevices);
             s2.setInt(1, userId);
             s2.executeUpdate();
-
+            
             PreparedStatement s3 = conn.prepareStatement(deleteDeviceDetails);
             s3.setInt(1, userId);
             s3.executeUpdate();
@@ -145,31 +136,22 @@ public class UserDAO {
             PreparedStatement s4 = conn.prepareStatement(deleteAdmin);
             s4.setInt(1, userId);
             s4.executeUpdate();
-
+            
             String deleteUserQuery = "DELETE FROM user WHERE user_id=?";
-
             PreparedStatement s5 = conn.prepareStatement(deleteUserQuery);
-
             s5.setInt(1, userId);
-
             int rows = s5.executeUpdate();
-
+            
             conn.commit();
-
             return rows > 0;
-
         } catch (Exception e) {
-
             try {
-
                 if (conn != null)
                     conn.rollback();
-
-            } catch (Exception ex) {
+            } 
+            catch (Exception ex) {
             }
-
             System.out.println("Error deleting user");
-
             e.printStackTrace();
         }
 

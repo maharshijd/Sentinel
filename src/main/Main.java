@@ -1,13 +1,13 @@
 package main;
 
+import dao.*;
+import java.net.*;
+import java.util.*;
 import model.Admin;
 import model.NormalUser;
 import model.SecurityRule;
 import model.User;
 import service.AuthService;
-import dao.*;
-import java.net.*;
-import java.util.*;
 
 public class Main {
     private static Scanner scanner = new Scanner(System.in);
@@ -21,6 +21,7 @@ public class Main {
     private static User currentUser = null;
 
     public static void main(String[] args) {
+        System.out.println();
         System.out.println("==================================================");
         System.out.println("            SENTINEL MONITORING SYSTEM    ");
         System.out.println("==================================================");
@@ -134,8 +135,9 @@ public class Main {
             System.out.println("4 Simulate Event");
             System.out.println("5 Sessions");
             System.out.println("6 Rules");
-            System.out.println("7 Delete User");
-            System.out.println("8 Logout");
+            System.out.println("7 View All users");
+            System.out.println("8 Delete User");
+            System.out.println("9 Logout");
         } else {
             System.out.println("1 View Alerts");
             System.out.println("2 View Events");
@@ -172,9 +174,12 @@ public class Main {
                 showSecurityRulesMenu();
                 break;
             case 7:
-                deleteUser();
+                viewUsers();
                 break;
             case 8:
+                deleteUser();
+                break;
+            case 9:
                 logout();
                 break;
             default:
@@ -261,14 +266,18 @@ public class Main {
         return false;
     }
 
-    private static void deleteUser() {
+    public static void viewUsers(){
+        UserDAO dao = new UserDAO();
+        dao.viewAllUsers();
+    }
+
+    public static void deleteUser() {
         UserDAO dao = new UserDAO();
         dao.viewAllUsers();
         System.out.print("Enter user ID to delete: ");
         int id;
         try {
             id = Integer.parseInt(scanner.nextLine());
-            System.out.println("User Deleted");
         } catch (Exception e) {
             System.out.println("Invalid input");
             return;
